@@ -3,7 +3,7 @@ from careernet_seven_jobs_crawler import CareernetCrawler  # WorknetCrawler ÌÅ¥Î
 
 def main():
     try:
-        crawler = WorknetCrawler()
+        crawler = CareernetCrawler()
 
         crawler.run()
     except Exception as e:

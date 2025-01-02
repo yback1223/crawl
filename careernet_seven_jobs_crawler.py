@@ -59,41 +59,58 @@ class CareernetCrawler():
             try:
                 job_name = self.driver.find_element(By.CSS_SELECTOR, "h3.job_name").text.strip()
             except Exception:
-                job_name = "-"
+                job_name = "N/A"
             job_data["직업명"] = job_name
             
-            # 관련직업
             try:
-                related_jobs = self.driver.find_element(By.CSS_SELECTOR, "p.cont_txt").text.strip()
+                container = self.driver.find_element(
+                    By.XPATH,
+                    "//div[@class='cont'][h4[text()='관련직업명']]"
+                )
+                # p.cont_txt 요소 직접 찾기
+                related_jobs_element = container.find_element(
+                    By.CSS_SELECTOR,
+                    "p.cont_txt"
+                )
+                # 텍스트 추출
+                job_data["관련직업"] = related_jobs_element.text.strip()
             except Exception:
-                related_jobs = "-"
-            job_data["관련직업"] = related_jobs
+                job_data["관련직업"] = "N/A"
 
-            # 관련학과
-            try:
-                related_major = WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located((By.XPATH, "//dl[dt[text()='관련학과']]/dd/a"))
-                ).text.strip()
-            except Exception:
-                related_major = "-"
-            job_data["관련학과"] = related_major
+            container = self.driver.find_element(
+                By.XPATH,
+                "//div[@class='cont'][h4[text()='관련학과 및 관련자격']]"
+            )
 
-            # 관련자격
+            # 2) 관련학과: 첫 번째 dl 내 a 태그들
             try:
-                related_certificates = WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located((By.XPATH, "//dl[dt[text()='관련자격']]/dd"))
-                ).text.strip()
-                related_certificates = [cert.strip() for cert in related_certificates.split(",")]
+                major_elements = container.find_elements(
+                    By.CSS_SELECTOR,
+                    "dl:nth-of-type(1) dd a"
+                )
+                related_majors = [m.text.strip() for m in major_elements]
+                job_data["관련학과"] = related_majors
             except Exception:
-                related_certificates = "-"
-            job_data["관련자격"] = related_certificates
+                job_data["관련학과"] = "N/A"
+
+
+            # 3) 관련자격: 두 번째 dl 내 dd 텍스트 (쉼표로 나눌 수도 있음)
+            try:
+                cert_dd = container.find_element(
+                    By.CSS_SELECTOR,
+                    "dl:nth-of-type(2) dd"
+                )
+                related_certificates = cert_dd.text.strip()
+                job_data["관련자격"] = related_certificates
+            except Exception:
+                job_data["관련자격"] = "N/A"
 
             # 하는일
             try:
                 doing_tasks = self.driver.find_elements(By.CSS_SELECTOR, "ul.dash_ul li")
                 doing_tasks = [task.text.strip() for task in doing_tasks]
             except Exception:
-                doing_tasks = "-"
+                doing_tasks = "N/A"
             job_data["하는일"] = doing_tasks
 
             # 적성
@@ -101,7 +118,7 @@ class CareernetCrawler():
                 aptitude = self.driver.find_elements(By.XPATH, "//dl[dt[text()='적성']]/dd")
                 aptitude = [apt.text.strip() for apt in aptitude]
             except Exception:
-                aptitude = "-"
+                aptitude = "N/A"
             job_data["적성"] = aptitude
 
             # 흥미
@@ -109,21 +126,21 @@ class CareernetCrawler():
                 interests = self.driver.find_elements(By.XPATH, "//dl[dt[text()='흥미']]/dd")
                 interests = [interest.text.strip() for interest in interests]
             except Exception:
-                interests = "-"
+                interests = "N/A"
             job_data["흥미"] = interests
 
             # 표준직업분류
             try:
                 standard_classification = self.driver.find_element(By.XPATH, "//p[contains(text(),'표준직업분류')]").text.split(" : ")[1].strip()
             except Exception:
-                standard_classification = "-"
+                standard_classification = "N/A"
             job_data["표준직업분류"] = standard_classification
 
             # 고용직업분류
             try:
                 employment_classification = self.driver.find_element(By.XPATH, "//p[contains(text(),'고용직업분류')]").text.split(" : ")[1].strip()
             except Exception:
-                employment_classification = "-"
+                employment_classification = "N/A"
             job_data["고용직업분류"] = employment_classification
 
             # 태그
@@ -199,7 +216,7 @@ class CareernetCrawler():
 
     def save_to_json(self, data, filename):
         try:
-            with open(f'extracted_json_data/careernet/{filename}', "w", encoding="utf-8") as f:
+            with open(f'extracted_json_data/{filename}', "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=4)
             print(f"데이터가 {filename} 파일로 저장되었습니다.")
         except Exception as e:
