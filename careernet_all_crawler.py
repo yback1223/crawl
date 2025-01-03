@@ -76,115 +76,89 @@ class CareernetCrawler():
         except Exception:
             pass
 
-    def extract_job_data(self, url):
-        time.sleep(WORK_TERM_SLEEP)
+    def extract_job_data(driver, url):
+        time.sleep(1)  # Simulate WORK_TERM_SLEEP
+
+        driver.get(url)
+
+        job_data = {}
 
         try:
-            self.driver.get(url)
+            job_name = driver.find_element(By.CSS_SELECTOR, "h3.job_name").text.strip()
+        except Exception:
+            job_name = "N/A"
+        job_data["직업명"] = job_name
 
-            job_data = {}
+        try:
+            containers = driver.find_elements(By.CSS_SELECTOR, "div#tab1.right_cont.current div.cont")
+            for container in containers:
+                h4 = container.find_element(By.CSS_SELECTOR, "h4").text.strip()
+                if h4 == "관련직업명":
+                    related_jobs_element = container.find_element(By.CSS_SELECTOR, "p.cont_txt")
+                    job_data["관련직업"] = related_jobs_element.text.strip()
+                elif h4 == "관련학과 및 관련자격":
+                    try:
+                        major_elements = container.find_elements(By.CSS_SELECTOR, "dl:nth-of-type(1) dd a")
+                        related_majors = [m.text.strip() for m in major_elements]
+                        job_data["관련학과"] = related_majors
+                    except Exception:
+                        job_data["관련학과"] = "N/A"
 
-            try:
-                job_name = self.driver.find_element(By.CSS_SELECTOR, "h3.job_name").text.strip()
-            except Exception:
-                job_name = "N/A"
-            job_data["직업명"] = job_name
-            
-            try:
-                container = self.driver.find_element(
-                    By.XPATH,
-                    "//div[@class='cont'][h4[text()='관련직업명']]"
-                )
-                # p.cont_txt 요소 직접 찾기
-                related_jobs_element = container.find_element(
-                    By.CSS_SELECTOR,
-                    "p.cont_txt"
-                )
-                # 텍스트 추출
-                job_data["관련직업"] = related_jobs_element.text.strip()
-            except Exception:
-                job_data["관련직업"] = "N/A"
+                    try:
+                        cert_dd = container.find_element(By.CSS_SELECTOR, "dl:nth-of-type(2) dd")
+                        related_certificates = cert_dd.text.strip()
+                        job_data["관련자격"] = related_certificates
+                    except Exception:
+                        job_data["관련자격"] = "N/A"
 
-            container = self.driver.find_element(
-                By.XPATH,
-                "//div[@class='cont'][h4[text()='관련학과 및 관련자격']]"
-            )
+                elif h4 == "하는일":
+                    try:
+                        doing_tasks = container.find_elements(By.CSS_SELECTOR, "ul.dash_ul li")
+                        doing_tasks = [task.text.strip() for task in doing_tasks]
+                    except Exception:
+                        doing_tasks = "N/A"
+                    job_data["하는일"] = doing_tasks
 
-            # 2) 관련학과: 첫 번째 dl 내 a 태그들
-            try:
-                major_elements = container.find_elements(
-                    By.CSS_SELECTOR,
-                    "dl:nth-of-type(1) dd a"
-                )
-                related_majors = [m.text.strip() for m in major_elements]
-                job_data["관련학과"] = related_majors
-            except Exception:
-                job_data["관련학과"] = "N/A"
+                elif h4 == "적성 및 흥미":
+                    try:
+                        aptitude_elements = container.find_elements(By.XPATH, "//dl[dt[text()='적성']]/dd")
+                        aptitude = [apt.text.strip() for apt in aptitude_elements]
+                    except Exception:
+                        aptitude = "N/A"
+                    job_data["적성"] = aptitude
 
+                    try:
+                        interest_elements = container.find_elements(By.XPATH, "//dl[dt[text()='흥미']]/dd")
+                        interests = [interest.text.strip() for interest in interest_elements]
+                    except Exception:
+                        interests = "N/A"
+                    job_data["흥미"] = interests
 
-            # 3) 관련자격: 두 번째 dl 내 dd 텍스트 (쉼표로 나눌 수도 있음)
-            try:
-                cert_dd = container.find_element(
-                    By.CSS_SELECTOR,
-                    "dl:nth-of-type(2) dd"
-                )
-                related_certificates = cert_dd.text.strip()
-                job_data["관련자격"] = related_certificates
-            except Exception:
-                job_data["관련자격"] = "N/A"
+                elif h4 == "분류":
+                    try:
+                        standard_classification = container.find_element(By.XPATH, "//p[contains(text(),'표준직업분류')]").text.split(" : ")[1].strip()
+                    except Exception:
+                        standard_classification = "N/A"
+                    job_data["표준직업분류"] = standard_classification
 
-            # 하는일
-            try:
-                doing_tasks = self.driver.find_elements(By.CSS_SELECTOR, "ul.dash_ul li")
-                doing_tasks = [task.text.strip() for task in doing_tasks]
-            except Exception:
-                doing_tasks = "N/A"
-            job_data["하는일"] = doing_tasks
+                    try:
+                        employment_classification = container.find_element(By.XPATH, "//p[contains(text(),'고용직업분류')]").text.split(" : ")[1].strip()
+                    except Exception:
+                        employment_classification = "N/A"
+                    job_data["고용직업분류"] = employment_classification
 
-            # 적성
-            try:
-                aptitude = self.driver.find_elements(By.XPATH, "//dl[dt[text()='적성']]/dd")
-                aptitude = [apt.text.strip() for apt in aptitude]
-            except Exception:
-                aptitude = "N/A"
-            job_data["적성"] = aptitude
-
-            # 흥미
-            try:
-                interests = self.driver.find_elements(By.XPATH, "//dl[dt[text()='흥미']]/dd")
-                interests = [interest.text.strip() for interest in interests]
-            except Exception:
-                interests = "N/A"
-            job_data["흥미"] = interests
-
-            # 표준직업분류
-            try:
-                standard_classification = self.driver.find_element(By.XPATH, "//p[contains(text(),'표준직업분류')]").text.split(" : ")[1].strip()
-            except Exception:
-                standard_classification = "N/A"
-            job_data["표준직업분류"] = standard_classification
-
-            # 고용직업분류
-            try:
-                employment_classification = self.driver.find_element(By.XPATH, "//p[contains(text(),'고용직업분류')]").text.split(" : ")[1].strip()
-            except Exception:
-                employment_classification = "N/A"
-            job_data["고용직업분류"] = employment_classification
-
-            # 태그
-            try:
-                tags = self.driver.find_elements(By.CSS_SELECTOR, "ul.cont_tag li a")
-                tags = [tag.text.strip() for tag in tags]
-            except Exception:
-                tags = "-"
-            job_data["태그"] = tags
-
-            return job_data
+                elif h4 == "태그":
+                    try:
+                        tags = container.find_elements(By.CSS_SELECTOR, "ul.cont_tag li a")
+                        tags = [tag.text.strip() for tag in tags]
+                    except Exception:
+                        tags = "-"
+                    job_data["태그"] = tags
 
         except Exception as e:
             raise Exception(f"직업 세부 데이터 추출 중 에러: {e}")
 
-
+        return job_data
 
 
 
