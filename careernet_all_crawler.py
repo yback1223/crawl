@@ -39,12 +39,13 @@ class CareernetCrawler():
 
             for job_link in all_job_links:
                 self.driver.get(job_link)
+                print(f'job_link: {job_link}')
                 time.sleep(WORK_TERM_SLEEP)
                 extracted_job_data = self.extract_job_data(job_link)
 
                 job_details.append(extracted_job_data)
 
-            self.save_to_json(job_details, "careernet_job_data.json")
+                self.save_to_json(job_details, "careernet_job_data.json")
 
         except Exception as e:
             raise Exception(f"크롤링 실행 중 에러: {e}")
